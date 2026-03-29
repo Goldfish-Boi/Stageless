@@ -1,0 +1,214 @@
+--!strict
+--!optimize 2
+
+local runService = game:GetService("RunService")
+local tweenService = game:GetService("TweenService")
+local debris = game:GetService("Debris")
+
+local ready = false
+local colourful = false
+local fish = false
+
+local TemplateFrame = script.Frame
+local count = 1
+local countingLevel = 1
+
+game.ReplicatedStorage.RNGEvents.OnClientEvent:Connect(function(rarity, events)	
+	if table.find(events, "Colourful") then
+		colourful = true
+	end
+	
+	if events["Fish Squares"] then
+		game.ContentProvider:PreloadAsync({script.FishFrame})
+		TemplateFrame = script.FishFrame
+		
+		fish = true
+		ready = true
+	else
+		ready = true
+	end
+end)
+
+local dt = 1 / 60
+
+--runService.RenderStepped:Connect(function(dt)
+repeat
+	task.wait()
+until ready == true
+
+while task.wait(dt) do
+	for i, child in ipairs(script.Parent:GetChildren()) do
+		if child:IsA("Frame") then
+			if child.Position.X.Scale > 1.15 then
+				child:Destroy()
+			else
+				child.Position = UDim2.fromScale(child.Position.X.Scale + 0.125 * dt * child:GetAttribute("SpeedMultiplier"), -0.75 * (child.Position.X.Scale - 0.5) ^ 2 + 0.9 + child:GetAttribute("DownDeviation"))
+			end
+		end
+	end
+	
+	--if count % countingLevel == 0 then
+		local square = TemplateFrame:Clone()
+		local n = math.random(1, 100)
+
+		
+		local size = 0.002 * n + 0.1
+		
+		if not colourful then
+			local colourValue =  -2.02 * n + 252
+			
+			square.BackgroundColor3 = Color3.fromRGB(colourValue, colourValue, colourValue)
+		else
+			local fishFrame:ImageLabel? = square:FindFirstChildOfClass("ImageLabel")
+			
+			if fishFrame then
+				fishFrame.ImageColor3 = Color3.fromRGB(math.random(0, 255), math.random(0, 255), math.random(0, 255))
+			else
+				square.BackgroundColor3 = Color3.fromRGB(math.random(0, 255), math.random(0, 255), math.random(0, 255))
+			end
+		end
+		
+		square.Size = UDim2.fromScale(size, size)
+		square.Position = UDim2.fromScale(-0.25, 0.55)
+		--square.LayoutOrder = math.random(0, 10)
+		--square.Position = UDim2.fromScale(math.random(0, 1000) / 1000, 0.55)
+
+		square:SetAttribute("DownDeviation", math.random(0, 250) / 1000)
+		square:SetAttribute("SpeedMultiplier", math.random(1, 10))
+		
+		square.ZIndex = square:GetAttribute("SpeedMultiplier")
+
+		--tweenService:Create(square, TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut), {Position = UDim2.fromScale(1.25, 0.55)}):Play()
+
+		debris:AddItem(square, -2 * square:GetAttribute("SpeedMultiplier") + 22)
+		
+		square.Parent = script.Parent
+	--end
+--end)
+end
+
+--while task.wait(dt) do
+--	-- Move and remove existing frames
+--	for _, child in ipairs(script.Parent:GetChildren()) do
+--		if child:IsA("Frame") then
+--			local x = child.Position.X.Scale
+
+--			if x > 1.15 then
+--				child:Destroy()
+--			else
+--				local speed = child:GetAttribute("SpeedMultiplier")
+--				local deviation = child:GetAttribute("DownDeviation")
+
+--				local newX = x + 0.125 * dt * speed
+--				local newY = -0.75 * (x - 0.5)^2 + 0.9 + deviation
+
+--				child.Position = UDim2.fromScale(newX, newY)
+--			end
+--		end
+--	end
+
+--	-- Create new square
+--	local square = TemplateFrame:Clone()
+--	local n = math.random(1, 100)
+
+--	local size = 0.002 * n + 0.1
+--	square.Size = UDim2.fromScale(size, size)
+--	square.Position = UDim2.fromScale(-0.25, 0.55)
+
+--	-- Color logic
+--	if not colourful then
+--		local grey = -2.02 * n + 252
+--		square.BackgroundColor3 = Color3.fromRGB(grey, grey, grey)
+--	else
+--		local r, g, b = math.random(0, 255), math.random(0, 255), math.random(0, 255)
+
+--		if fish then
+--			square.FishFrame.ImageColor3 = Color3.fromRGB(r, g, b)
+--		else
+--			square.BackgroundColor3 = Color3.fromRGB(r, g, b)
+--		end
+--	end
+
+--	-- Attributes
+--	local speed = math.random(1, 10)
+--	local deviation = math.random(0, 250) / 1000
+
+--	square:SetAttribute("SpeedMultiplier", speed)
+--	square:SetAttribute("DownDeviation", deviation)
+--	square.ZIndex = speed
+
+--	-- Auto-remove
+--	debris:AddItem(square, -2 * speed + 22)
+
+--	-- Parent last
+--	square.Parent = script.Parent
+--end
+
+--local parent = script.Parent
+--local children
+--local rand = math.random
+
+--while task.wait(dt) do
+--	-- Cache children once per frame
+--	children = parent:GetChildren()
+
+--	for i = 1, #children do
+--		local child = children[i]
+
+--		if child:IsA("Frame") then
+--			local pos = child.Position
+--			local x = pos.X.Scale
+
+--			if x > 1.15 then
+--				child:Destroy()
+--			else
+--				-- Cache attributes once
+--				local speed = child:GetAttribute("SpeedMultiplier")
+--				local deviation = child:GetAttribute("DownDeviation")
+
+--				-- Compute new position
+--				local newX = x + 0.125 * dt * speed
+--				local dx = x - 0.5
+--				local newY = -0.75 * dx * dx + 0.9 + deviation
+
+--				child.Position = UDim2.fromScale(newX, newY)
+--			end
+--		end
+--	end
+
+--	-- Create new square
+--	local square = TemplateFrame:Clone()
+--	local n = rand(1, 100)
+
+--	-- Precompute size
+--	local size = 0.002 * n + 0.1
+--	square.Size = UDim2.fromScale(size, size)
+--	square.Position = UDim2.fromScale(-0.25, 0.55)
+
+--	-- Color logic
+--	if not colourful then
+--		local grey = -2.02 * n + 252
+--		square.BackgroundColor3 = Color3.fromRGB(grey, grey, grey)
+--	else
+--		local r, g, b = rand(0, 255), rand(0, 255), rand(0, 255)
+
+--		if fish then
+--			square.FishFrame.ImageColor3 = Color3.fromRGB(r, g, b)
+--		else
+--			square.BackgroundColor3 = Color3.fromRGB(r, g, b)
+--		end
+--	end
+
+--	-- Attributes
+--	local speed = rand(1, 10)
+--	local deviation = rand(0, 250) / 1000
+
+--	square:SetAttribute("SpeedMultiplier", speed)
+--	square:SetAttribute("DownDeviation", deviation)
+--	square.ZIndex = speed
+
+--	-- Auto-remove
+--	debris:AddItem(square, -2 * speed + 22)
+
+--	square.Parent = parent
+--end
