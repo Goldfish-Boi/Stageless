@@ -31,6 +31,8 @@ local Teleport = require(script.Teleport)
 local Announcements = require(script.Announcements)
 local COLLISION_MAP = require(script.CollisionGroupMap)
 local KitSettings = require(ReplicatedStorage.KitSettings)
+local towerInfo = require(ReplicatedStorage.Modules.TowerInfo)
+local miscInfo = require(ReplicatedStorage.Modules.MiscInfo)
 
 -- Folders
 local GameData = ServerScriptService.GameData
@@ -352,8 +354,8 @@ function InitPortal(PortalPart:BasePart)
 				-- A player touched this portal, load the appropriate tower
 				PortalCutscene(PlayerName, PortalPart, "")
 				
-				if playerSettingsTable[PlayerName]["PortalTransitions"] and playerSettingsTable[PlayerName]["PortalTransitions"] == true then
-					task.wait(2)
+				if playerSettingsTable[PlayerName]["DisplayPortalTransitions"] and playerSettingsTable[PlayerName]["DisplayPortalTransitions"] == true then
+					task.wait(1)
 				end
 				
 				PlayerLoadTower(PlayerName,TowerVal.Value, true)
@@ -375,8 +377,8 @@ function InitPortal(PortalPart:BasePart)
 				-- A player touched this portal, load the appropriate tower rush
 				PortalCutscene(PlayerName, PortalPart, TowerRushVal.Value)
 
-				if playerSettingsTable[PlayerName]["PortalTransitions"] and playerSettingsTable[PlayerName]["PortalTransitions"] == true then
-					task.wait(2)
+				if playerSettingsTable[PlayerName]["DisplayPortalTransitions"] and playerSettingsTable[PlayerName]["DisplayPortalTransitions"] == true then
+					task.wait(1)
 				end
 				
 				PlayerLoadTowerRush(PlayerName,TowerRushVal.Value)
@@ -396,8 +398,8 @@ function InitPortal(PortalPart:BasePart)
 				-- A player touched this portal, load the appropriate tower rush
 				PortalCutscene(PlayerName, PortalPart, "")
 
-				if playerSettingsTable[PlayerName]["PortalTransitions"] and playerSettingsTable[PlayerName]["PortalTransitions"] == true then
-					task.wait(2)
+				if playerSettingsTable[PlayerName]["DisplayPortalTransitions"] and playerSettingsTable[PlayerName]["DisplayPortalTransitions"] == true then
+					task.wait(1)
 				end
 				
 				PlayerLoadTowerRush(PlayerName,TowerRushName)
@@ -512,9 +514,25 @@ function PlayerLoadTower(PlayerName:string,TowerName:string, ResetTimer:boolean,
 		Player.IsLoadingTower = true
 		Tower.BarrierCreated = false
 		
+		if playerSettingsTable[PlayerName]["PracticeMode"] == true then 
+			task.spawn(function()
+				task.wait(5)
+
+				RemoteEvents.Notification:FireClient(Player.Player, "Message", "You are currently in practice mode, this is a reminder that towers cannot be completed. Type !exit in order to leave a tower")
+			end)
+		end
+		
+		if playerSettingsTable[PlayerName]["NoHitMode"] == true and playerSettingsTable[PlayerName]["PracticeMode"] == false then
+			task.spawn(function()
+				task.wait(5)
+
+				RemoteEvents.Notification:FireClient(Player.Player, "Message", "This is a reminder that you are currently in no hit mode. Certain towers may become impossible to beat")
+			end)
+		end
+		
 		-- Forcefully load the character
 		-- should disrupt natural respawning
-		Player.Player:LoadCharacter()
+		Player.Player:LoadCharacterAsync()
 		repeat
 			wait(0.05)
 		until Player.Player.Character
@@ -546,15 +564,15 @@ function PlayerLoadTower(PlayerName:string,TowerName:string, ResetTimer:boolean,
 		
 		if not Time then
 			BindableEvents.IncrementGlobalData:Fire(TowerName, "Attempt")
-			BindableEvents.UpdatePlayerData:Fire(TowerName, "Attempt")
+			BindableEvents.UpdatePlayerData:Fire(Player.Player, TowerName, "Attempt")
 		else
 			BindableEvents.IncrementGlobalData:Fire(TowerName, "Attempt", Time)
-			BindableEvents.UpdatePlayerData:Fire(TowerName, "Attempt", Time)
+			BindableEvents.UpdatePlayerData:Fire(Player.Player, TowerName, "Attempt", Time)
 		end
-		
+
 		game:BindToClose(function()
 			BindableEvents.IncrementGlobalData:Fire(TowerName, nil, Player.TowerTimer)
-			BindableEvents.UpdatePlayerData:Fire(TowerName, nil, Player.TowerTimer)
+			BindableEvents.UpdatePlayerData:Fire(Player.Player, TowerName, nil, Player.TowerTimer)
 		end)
 		
 		RemoteEvents.LoadTower:FireClient(Player.Player, TowerName, Purist, ResetTimer)
@@ -665,7 +683,7 @@ function AdvanceTowerRush(PlayerName:string)
 				end
 				
 				BindableEvents.IncrementGlobalData:Fire(TowerRush.Title, "Win", Player.TowerTimer)
-				BindableEvents.UpdatePlayerData:Fire(TowerRush.Title, "Win", Player.TowerTimer)
+				BindableEvents.UpdatePlayerData:Fire(Player.Player, TowerRush.Title, "Win", Player.TowerTimer)
 				
 				RemoteEvents.EffectEvent:FireClient(Player.Player, script.Parent, "Win", nil)
 				
@@ -696,6 +714,8 @@ function PlayerTouchedWinpad(PlayerName:string, TowerName:string, EndingID:strin
 	local Tower:TowerInfo = Towers[TowerName]
 	if Player and Tower then
 		if Player.TouchEventBusy then return end
+		if playerSettingsTable[PlayerName]["PracticeMode"] == true then return end
+		
 		Player.TouchEventBusy = true
 		
 		local Ending:EndingInfo = Tower.Endings[EndingID]
@@ -725,16 +745,14 @@ function PlayerTouchedWinpad(PlayerName:string, TowerName:string, EndingID:strin
 				end
 			end
 			
-			if Tower.Folder:HasTag("NoBoosts") and Player.BoostItemUsed == true then
-				return
-			end
+			if Tower.Folder:HasTag("NoBoosts") and Player.BoostItemUsed == true then return end
 			
-			if Tower.Folder:HasTag("NoVM") and Player.VMUsed == true then
-				return
-			end
+			if Tower.Folder:HasTag("NoVM") and Player.VMUsed == true then return end
 			
-			print(Player.BoostItemUsed)
-			print(Player.VMUsed)
+			if Player.Player.Character:HasTag("Restarting") then return end
+			
+			--print(Player.BoostItemUsed)
+			--print(Player.VMUsed)
 			
 			if Player.CurrentTowerRush == "" then
 				-- The player is doing a singular tower
@@ -755,25 +773,57 @@ function PlayerTouchedWinpad(PlayerName:string, TowerName:string, EndingID:strin
 				Announcements:WinAnnouncement(
 					Player,
 					EndingName,
-					EndingDifficultyName
+					EndingDifficultyName,
+					playerSettingsTable[PlayerName]["NoHitMode"]
 				)
 				
 				print(Player.TowerTimer)
 				
-				-- Award badge(s)
+				Player.Player.Character:AddTag("WinImmunity")
 				
+				-- Award badge(s)
 				if Tower.BadgeID ~= 0 and not Ending.PreventTowerBadge then
 					print("Guh")
+
 					RemoteEvents.Notification:FireClient(Player.Player, "Badge", Tower.BadgeID)
-					BadgeService:AwardBadge(Player.Player.UserId, Tower.BadgeID)
-				end
-				if Ending.BadgeID ~= 0 then
-					RemoteEvents.Notification:FireClient(Player.Player, "Badge", Ending.BadgeID)
-					BadgeService:AwardBadge(Player.Player.UserId, Ending.BadgeID)
+					
+					task.spawn(function()
+						task.wait(1)
+						BadgeService:AwardBadge(Player.Player.UserId, Tower.BadgeID)
+					end)
+					
+
+					print(Tower.Difficulty)
+
+					if towerInfo[Tower.Folder.Name]["Difficulty"]["Number"] < 8.00 then
+						RemoteEvents.Notification:FireClient(Player.Player, "Badge", miscInfo["MiscCompletions"]["Beat your first " .. Tower.Difficulty .. " tower!"]["BadgeID"])
+						
+						task.spawn(function()
+							task.wait(1)
+							BadgeService:AwardBadge(Player.Player.UserId, miscInfo["MiscCompletions"]["Beat your first " .. Tower.Difficulty .. " tower!"]["BadgeID"])
+						end)	
+					elseif towerInfo[Tower.Folder.Name]["Difficulty"]["Number"] >= 8.00 then
+						RemoteEvents.Notification:FireClient(Player.Player, "Badge", miscInfo["MiscCompletions"]["Beat your first Soul Crushing tower!"]["BadgeID"])
+						
+						task.spawn(function()
+							task.wait(1)
+							BadgeService:AwardBadge(Player.Player.UserId, miscInfo["MiscCompletions"]["Beat your first Soul Crushing tower!"]["BadgeID"])
+						end)
+					end
 				end
 				
-				BindableEvents.IncrementGlobalData:Fire(TowerName, "Win", Player.TowerTimer)
-				BindableEvents.UpdatePlayerData:Fire(TowerName, "Win", Player.TowerTimer)
+				if Ending.BadgeID ~= 0 then
+					RemoteEvents.Notification:FireClient(Player.Player, "Badge", Ending.BadgeID)
+					
+					task.spawn(function()
+						task.wait(1)
+						
+						BadgeService:AwardBadge(Player.Player.UserId, Ending.BadgeID)
+					end)
+				end
+				
+				BindableEvents.IncrementGlobalData:Fire(TowerName, "Win", Player.TowerTimer, playerSettingsTable[PlayerName]["NoHitMode"])
+				BindableEvents.UpdatePlayerData:Fire(Player.Player, TowerName, "Win", Player.TowerTimer, if Player.DebugItemUsed == true then "Debug" elseif Player.VMUsed == true then "VM" elseif Player.BoostItemUsed == true then "Boost" else "")
 				
 				RemoteEvents.Effect:FireClient(Player.Player, script.Parent, "Win", nil)
 				
@@ -807,8 +857,14 @@ function PlayerRequestedRestart(PlayerInstance:Player, Type:string)
 	if Player.GameTimer - Player.LastRestart >= Config.RestartCooldown then
 		Player.LastRestart = Player.GameTimer
 		
-		-- The player isn't even in a tower
 		if Player.CurrentTower == "" then return end
+		
+		RemoteEvents.Effect:FireClient(Player.Player, nil, "Quick")
+		
+		Player.Player.Character:AddTag("Restarting")
+
+		task.wait(1)
+		
 		if Player.CurrentTowerRush == "" then
 			PlayerLoadTower(PlayerInstance.Name,Player.CurrentTower,true, Player.TowerTimer)
 		else
@@ -903,8 +959,12 @@ function exitTower(plr:Player)
 	
 	if Player.CurrentTower ~= "" then
 		BindableEvents.IncrementGlobalData:Fire(Player.CurrentTower, nil, Player.TowerTimer)
-		BindableEvents.UpdatePlayerData:Fire(Player.CurrentTower, nil, Player.TowerTimer)
-
+		BindableEvents.UpdatePlayerData:Fire(Player.Player, Player.CurrentTower, nil, Player.TowerTimer)
+		
+		RemoteEvents.Effect:FireClient(Player.Player, nil, "Quick")
+		
+		task.wait(1)
+		
 		if not Player.TouchEventBusy then
 			Player.TouchEventBusy = true
 			Teleport:TeleportPlayerToPart(Player.Player, Markers.SpawnLocation)
@@ -963,7 +1023,7 @@ function PlayerRemoving(PlayerInstance:Player)
 	
 	if Player.CurrentTower ~= "" then
 		BindableEvents.IncrementGlobalData:Fire(Player.CurrentTower, nil, Player.TowerTimer)
-		BindableEvents.UpdatePlayerData:Fire(Player.CurrentTower, nil, Player.TowerTimer)
+		BindableEvents.UpdatePlayerData:Fire(Player.Player, Player.CurrentTower, nil, Player.TowerTimer)
 	end
 	
 	Players[PlayerInstance.Name] = nil
@@ -1039,13 +1099,17 @@ local types={
 
 do --> Damage Event
 	local debounceArray = {} :: { [Player]: boolean? }
-	ReplicatedStorage.DamageEvent.OnServerEvent:Connect(function(player: Player, type: string | number)
+	ReplicatedStorage.Framework.Remotes.Towers.Objects.DamageEvent.OnServerEvent:Connect(function(player: Player, type: string | number)
 		if debounceArray[player] then
 			return
 		end
 
 		local character = player.Character
 		if not character then
+			return
+		end
+		
+		if character:HasTag("WinImmunity") then
 			return
 		end
 
@@ -1056,8 +1120,13 @@ do --> Damage Event
 		
 		
 		local damageValue = if typeof(type) == "number" then type else 5
+		
 		if type == "Heals" then
 			damageValue = -(humanoid.MaxHealth - humanoid.Health)
+		else
+			if playerSettingsTable[player.Name]["NoHitMode"] == true then
+				damageValue = math.huge
+			end
 		end
 
 		if damageValue > 0 then -- no debounce for healing
@@ -1113,3 +1182,4 @@ do
 	InitPortals()
 	InitMarkers()
 end
+
