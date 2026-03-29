@@ -50,10 +50,10 @@ local KickMessages:List<string> = {}
 
 local LatestGlobalMessageID:string = ""
 
-function m:WinAnnouncement(Player:PlayerInfo,EndingName:string,DifficultyName:string)
+function m:WinAnnouncement(Player:PlayerInfo,EndingName:string,DifficultyName:string,NoHit:boolean)
 	
-	local regularWebhookURL = "example webhook here"
-	local scWebhookURL = "example webhook here"
+	local regularWebhookURL = "[Example Webhook]"
+	local scWebhookURL = "[Example Webhook]"
 
 	local EndingDifficulty:Difficulty = Util:GetDifficulty(DifficultyName)
 	
@@ -80,7 +80,7 @@ function m:WinAnnouncement(Player:PlayerInfo,EndingName:string,DifficultyName:st
 		Messaging:PublishAsync("GlobalWin",Info)
 	end
 
-	local StandardDiffs = {"Easy", "Medium", "Hard", "Difficult", "Challenging", "Intense", "Remorseless"}
+	local StandardDiffs = {"Effortless", "Easy", "Medium", "Hard", "Difficult", "Challenging", "Intense", "Remorseless"}
 	local SCDiffs = {"Insane", "Extreme", "Terrifying", "Catastrophic", "Horrific", "Unreal", "Nil", "TowerRush"}
 
 	local webhookURL = regularWebhookURL
@@ -113,36 +113,37 @@ function m:WinAnnouncement(Player:PlayerInfo,EndingName:string,DifficultyName:st
 	-- remember to make ur tower rush emoji have an 'a' in front of the emoji kind of like this <a:thing:1234567890>
 	-- if i figure out how to make the in-game tower rush announcement rainbow i might share that as well but otherwise dont ask me
 	local Difficulties = {
-		['Easy'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(100,225,75)}; --Easy
-		['Medium'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(255,255,0)}; --Medium
-		['Hard'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(225, 115, 0)}; --Hard
-		['Difficult'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(255,0,0)}; --Difficult
-		['Challenging'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(170,0,0)}; --Challenging
-		['Intense'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(50,85,110)}; --Intense
-		['Remorseless'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(255,0,225)}; --Remorseless
-		['Insane'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(0,70,255)};--Insane
-		['Extreme'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(55,155,255)}; --Extreme
-		['Terrifying'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(0,255,255)};--Terrifying
-		['Catastrophic'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(225,225,225)};--Cata
-		['Horrific'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(150, 150, 255)};--Horrific
-		['Unreal'] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(75, 0, 255)};--Unreal
-		["TowerRush"] = {emote = "<exampleEmoji>", dcolor = Color3.fromRGB(255,255,255)};
+		['Effortless'] = {emote = "<:Effortless:1426033094128959508>", dcolor = Color3.fromRGB(0, 150, 0)};
+		['Easy'] = {emote = "<:Easy:1426033267311775816>", dcolor = Color3.fromRGB(100,225,75)};
+		['Medium'] = {emote = "<:Medium:1426033305391988887>", dcolor = Color3.fromRGB(255,255,0)};
+		['Hard'] = {emote = "<:Hard:1426033364292472893> ", dcolor = Color3.fromRGB(225, 115, 0)};
+		['Difficult'] = {emote = "<:Difficult:1426033403865731132>", dcolor = Color3.fromRGB(255,0,0)};
+		['Challenging'] = {emote = "<:Challenging:1426033461243809816>", dcolor = Color3.fromRGB(170,0,0)};
+		['Intense'] = {emote = "<:Intense:1426033516612685875>", dcolor = Color3.fromRGB(50,85,110)};
+		['Remorseless'] = {emote = "<:Remorseless:1426033563421380698>", dcolor = Color3.fromRGB(255,0,225)};
+		['Insane'] = {emote = "<:Insane:1426033625983615026>", dcolor = Color3.fromRGB(0,70,255)};
+		['Extreme'] = {emote = "<:Extreme:1426033676210147450>", dcolor = Color3.fromRGB(55,155,255)};
+		['Terrifying'] = {emote = "<:Terrifying:1426033731667230811>", dcolor = Color3.fromRGB(0,255,255)};
+		['Catastrophic'] = {emote = "<:Catastrophic:1426033773966921830>", dcolor = Color3.fromRGB(225,225,225)};
+		['Horrific'] = {emote = "<:Horrific:1426033811694682163>", dcolor = Color3.fromRGB(150, 150, 255)};
+		['Unreal'] = {emote = "<:Unreal:1426033846666924166>", dcolor = Color3.fromRGB(75, 0, 255)};
+		["TowerRush"] = {emote = "<a:TowerRush:1427805484836192286>", dcolor = Color3.fromRGB(255,255,255)};
 	}
 
 	--print(Difficulties[DifficultyName].emote)
 
 	local difficultyTag = "[" .. Difficulties[DifficultyName].emote .. "]"
 	local timeString = string.format("%02d:%02d.%03d", minutes, seconds, milliseconds)
-
+	
 	local discordMessage = string.format(
-		"**%s** has beaten **%s** %s in %s",
+		if NoHit == true then "**%s** has *no hit* **%s** %s in %s" else "**%s** has beaten **%s** %s in %s",
 		Info.PlayerName,
 		Info.EndingName,
 		difficultyTag,
 		"`"..timeString:sub(1, timeString:len() - 1).."`"
 	)
 
-	--print(Player.BoostItemUsed)
+	print(Player.BoostItemUsed)
 	if Player.BoostItemUsed == true then
 		discordMessage = string.format(
 			"%s\n**Boosts Used:** %s",
