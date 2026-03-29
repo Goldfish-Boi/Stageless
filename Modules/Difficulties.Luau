@@ -7,7 +7,14 @@ return {
 		Color = Color3.fromRGB(255,255,255),
 		GlobalAnnouncement = false
 	},
+	Effortless = {
+		Title = "Effortless",
+		Rating = 0,
 
+		FancyFont = false,
+		Color = Color3.fromRGB(0, 150, 0),
+		GlobalAnnouncement = false
+	},
 	Easy = {
 		Title = "Easy",
 		Rating = 1,
