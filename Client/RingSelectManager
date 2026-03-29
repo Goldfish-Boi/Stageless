@@ -1,0 +1,289 @@
+--wait(2)
+
+local ts = game:GetService("TweenService")
+local uis = game:GetService("UserInputService")
+local runService = game:GetService("RunService")
+local PG
+local world = workspace.RingSelect.W1
+
+local towerInfo = require(game.ReplicatedStorage.Modules.TowerInfo)
+local miscInfo = require(game.ReplicatedStorage.Modules.MiscInfo)
+
+pcall(function()
+	local starterGui = game:GetService('StarterGui')
+	starterGui:SetCore("TopbarEnabled", false)
+end)
+
+repeat wait() PG = game.Players.LocalPlayer:FindFirstChild("PlayerGui") until PG
+
+local NavGui = script.Parent
+--local WorldSelect = NavGui:WaitForChild("WorldSelect")
+
+local current
+local ogCframe
+
+local worlddeb=true
+local worldString = "R"
+
+local bcount=game.ReplicatedStorage.getBadgeCount:InvokeServer()
+local badgeCount=bcount.badge
+local UniqueTowerCount=bcount.tower
+
+local fogends={
+	W1=math.huge, -- You do not need fog, trust me.
+	W2=math.huge,
+}
+
+NavGui.BgSound:Play()
+
+workspace.CurrentCamera.CFrame = workspace.RingSelect.W1.R1.Cam.CFrame
+
+local playerData = game.ReplicatedStorage.Communicators.Remotes.Functions.RequestData:InvokeServer("All")
+
+local function setRing(ring, waitTime)
+	if ring then
+		if current then
+			--current:FindFirstChild("GuiHolder").BillboardGui.Enabled = false
+		end
+		
+		current = ring
+
+		local Difficulties = current:WaitForChild("TowerDifs")
+
+		--NavGui.MainFrame.InfoDetail.InfoBox.Text = current:WaitForChild("Info").Value
+		--NavGui.MainFrame.RingDetail.Ring.Text = current:WaitForChild("PlaceName").Value
+		ts:Create(workspace.CurrentCamera,TweenInfo.new(waitTime or 1),{CFrame = ring.Cam.CFrame}):Play()
+		
+		ogCframe = ring.Cam.CFrame
+		NavGui.MainFrame.RingName.Text = current:FindFirstChild("PlaceName").Value
+		NavGui.MainFrame.InfoFrame.Requirement.Text = tostring(current:FindFirstChild("badgeCount").Value)
+		NavGui.MainFrame.InfoFrame.Info.Text = current:FindFirstChild("Info").Value
+		--current:FindFirstChild("GuiHolder").BillboardGui.Enabled = true
+		
+		for _, b in pairs(NavGui.MainFrame.TowerList.DifficultyBar:GetChildren()) do
+			if b:IsA("Frame") then
+				b:Destroy()
+			end
+		end
+		
+		for _, b in pairs(NavGui.MainFrame.TowerList.CompletionBar:GetChildren()) do
+			if b:IsA("Frame") then
+				b:Destroy()
+			end
+		end
+
+		for i, tower in pairs(towerInfo) do
+			if tower["Area"] == ring.PlaceName.Value then
+				local difFrame = script.TowerItems:FindFirstChild(tower["Difficulty"]["Name"]):Clone()
+				local completionFrame = script.TowerItems.Completion:Clone()
+				
+				difFrame.Parent = NavGui.MainFrame.TowerList.DifficultyBar
+				difFrame.LayoutOrder = tower["Difficulty"]["Number"] * 100
+				
+				completionFrame.Parent = NavGui.MainFrame.TowerList.CompletionBar
+				completionFrame.LayoutOrder = tower["Difficulty"]["Number"] * 100
+				completionFrame.Name = i
+				
+				if (playerData["TowerCompletions"][i]["Wins"] > 0 or playerData["TowerCompletions"][i]["NoHitWins"] > 0) then
+					completionFrame.BackgroundColor3 = Color3.fromRGB(133, 255, 133)
+					completionFrame.UIStroke.Color = Color3.fromRGB(102, 255, 102)
+				end
+			end
+		end
+	end
+end
+
+local function setWorld(sworld)
+	if sworld and worlddeb then
+		worlddeb=false
+		world=sworld
+		--game.ReplicatedStorage.GuiTransitionLocal:FireServer()
+		wait(2)
+		if fogends[sworld.Name] then
+			game.Lighting.FogEnd=fogends[sworld.Name]
+		end
+		--NavGui.WorldName.Image = sworld:WaitForChild("WorldName").Value
+		--NavGui.MainFrame:WaitForChild'TowersBeaten'.Text=('Towers Completed: '..UniqueTowerCount[tonumber(string.sub(world.Name,2))])
+		if sworld == workspace.RingSelect.W1 then
+			worldString = "R"
+			setRing(sworld:FindFirstChild'R1')
+		elseif sworld == workspace.RingSelect.W2 then
+			worldString = "Z"
+			setRing(sworld:FindFirstChild'Z1')
+		end
+		workspace.CurrentCamera.CFrame=current.Cam.CFrame
+		worlddeb=true
+	end
+end
+
+setWorld(workspace.RingSelect.W1)
+
+uis.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Keyboard then
+		if input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.Left then
+			NavGui.Swoosh:Play()
+			local new = world:FindFirstChild(worldString..string.sub(current.Name,-1,-1)-1)
+			if new then
+				setRing(new)
+			end
+		elseif input.KeyCode == Enum.KeyCode.D or input.KeyCode == Enum.KeyCode.Right then
+			NavGui.Swoosh:Play()
+			local new = world:FindFirstChild(worldString..string.sub(current.Name,-1,-1)+1)
+			if new then
+				setRing(new)
+			end
+		elseif input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.Space then
+			local wl={
+				['Fwameys'] = true
+			}
+			if current and ((current.accessible.Value and badgeCount[tonumber(string.sub(world.Name,2))] >= current.badgeCount.Value) or wl[game.Players.LocalPlayer.Name]) or game.Players.LocalPlayer:GetRankInGroup(4406211) > 1 then
+				NavGui.Enter:Play()
+				game:GetService("TeleportService"):Teleport(current.placeId.Value)
+			end
+		end
+	end
+end)
+
+uis.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.Keyboard then
+		if input.KeyCode == Enum.KeyCode.Q then
+			NavGui.Swoosh:Play()
+			if world == workspace.RingSelect.W1 then
+				setWorld(workspace.RingSelect.W2)
+			else
+				setWorld(workspace.RingSelect.W1)
+			end
+		elseif input.KeyCode == Enum.KeyCode.E then
+			NavGui.Swoosh:Play()
+			if world == workspace.RingSelect.W1 then
+				setWorld(workspace.RingSelect.W2)
+			else
+				setWorld(workspace.RingSelect.W1)
+			end
+		end
+	end
+end)
+
+NavGui.MainFrame.Info.MouseButton1Click:Connect(function()
+	if NavGui.MainFrame.InfoFrame.Visible == false then
+		NavGui.MainFrame.InfoFrame.Position = UDim2.new(0.598, 0,0.425, 0)
+		ts:Create(NavGui.MainFrame.InfoFrame, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = UDim2.new(0.598, 0, 0.45, 0)}):Play()
+		
+		NavGui.MainFrame.InfoFrame.Visible = true
+	elseif NavGui.MainFrame.InfoFrame.Visible == true then
+		NavGui.MainFrame.InfoFrame.Visible = false
+	end
+end)
+
+local ringSelectRarity
+local ringSelectEvents
+local rarityOpened = false
+
+game.ReplicatedStorage.RNGEvents.OnClientEvent:Connect(function(rarity, events)
+	ringSelectRarity = rarity
+	ringSelectEvents = events
+	
+	if rarity == 1 then return end
+	
+	NavGui.MainFrame.RingSelectRarity.Visible = true
+	
+	local textLabel = NavGui.MainFrame.RingSelectRarity.Template:Clone()
+	textLabel.Text = "Rarity 1 / " .. rarity
+	textLabel.Name = "Rarity"
+	textLabel.Visible = true
+	textLabel.Parent = NavGui.MainFrame.RingSelectRarity
+end)
+
+NavGui.MainFrame.RingSelectRarity.MouseButton1Click:Connect(function()
+	if ringSelectRarity == 1 or nil then return end
+	
+	if rarityOpened == false then
+		rarityOpened = true
+		
+		NavGui.MainFrame.RingSelectRarity:FindFirstChild("Rarity"):Destroy()
+		
+		for i, v in pairs(ringSelectEvents) do
+			local textLabel = NavGui.MainFrame.RingSelectRarity.Template:Clone()
+			textLabel.Text = i .. " 1 / " .. v
+			textLabel.Name = "Rarity"
+			textLabel.LayoutOrder = v
+			textLabel.Visible = true
+			textLabel.Parent = NavGui.MainFrame.RingSelectRarity
+		end
+	else
+		rarityOpened = false
+		
+		for i, child in pairs(NavGui.MainFrame.RingSelectRarity:GetChildren()) do
+			if child.Name == "Rarity" then
+				child:Destroy()
+			end
+		end
+		
+		local textLabel = NavGui.MainFrame.RingSelectRarity.Template:Clone()
+		textLabel.Text = "Rarity 1 / " .. ringSelectRarity
+		textLabel.Name = "Rarity"
+		textLabel.Visible = true
+		textLabel.Parent = NavGui.MainFrame.RingSelectRarity
+	end
+end)
+
+db = false
+
+NavGui.MainFrame.Enter.MouseButton1Click:Connect(function()
+	if db == true then return end
+	
+	db = true
+	
+	NavGui.MainFrame.Enter.Position = UDim2.new(0.5, 0,0.85, 0)
+	
+	task.spawn(function()
+		while true do
+			NavGui.MainFrame.Enter.TextLabel.Text = "Entering"
+			task.wait(1)
+			NavGui.MainFrame.Enter.TextLabel.Text = "Entering."
+			task.wait(1)
+			NavGui.MainFrame.Enter.TextLabel.Text = "Entering.."
+			task.wait(1)
+			NavGui.MainFrame.Enter.TextLabel.Text = "Entering..."
+			task.wait(1)
+		end
+	end)
+	
+	
+	ts:Create(NavGui.MainFrame.Enter, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, 0, 0.875, 0)}):Play()
+	
+	local wl={
+		['Fwameys'] = true
+	}
+	if current and ((current.accessible.Value and badgeCount[tonumber(string.sub(world.Name,2))] >= current.badgeCount.Value) or wl[game.Players.LocalPlayer.Name]) then
+		NavGui.Enter:Play()
+		game.ReplicatedStorage.Communicators.Remotes.Events.Teleport:FireServer(current.placeId.Value)
+	end
+end)
+
+NavGui.MainFrame.Previous.MouseButton1Click:Connect(function()
+	NavGui.Swoosh:Play()
+	local new = world:FindFirstChild("R"..string.sub(current.Name,-1,-1)-1)
+	if new then
+		setRing(new)
+	end
+end)
+
+NavGui.MainFrame.Next.MouseButton1Click:Connect(function()
+	NavGui.Swoosh:Play()
+	local new = world:FindFirstChild("R"..string.sub(current.Name,-1,-1)+1)
+	if new then
+		setRing(new)
+	end
+end)
+
+local mouse = game.Players.LocalPlayer:GetMouse()
+local viewport = workspace.Camera.ViewportSize
+
+runService.RenderStepped:Connect(function(deltaTime)
+	if current then
+		current.Cam.CFrame = ogCframe * CFrame.Angles(-math.rad(((math.max(0, mouse.Y) / viewport.Y) - 0.5) * 50), -math.rad(((mouse.X / viewport.X) - 0.5) * 50), 0)
+		ts:Create(workspace.CurrentCamera,TweenInfo.new(0.25),{CFrame = current.Cam.CFrame}):Play()
+		--print(mouse.X .. " " .. mouse.Y)
+	end
+end)
