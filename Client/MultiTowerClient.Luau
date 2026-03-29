@@ -78,14 +78,25 @@ local ClientParts = workspace:FindFirstChild("ClientParts")
 		return newFolder
 	end)()
 
+local EverpresentClientParts = workspace:FindFirstChild("EverpresentClientParts")
+	or (function()
+		local newFolder = Instance.new("Folder")
+		newFolder.Name = "EverpresentClientParts"
+		newFolder.Parent = workspace
+		return newFolder
+	end)()
+
 function LoadTower(Acronym:string, Purist:boolean, ResetTimer:boolean)
-	TimerPaused = false
+	TimerPaused = false	
 	CurrentTower = Acronym
+	
 	if ResetTimer then
 		TowerTimer = 0
 		GUI:SetBoostsUsed(false)
 	end
+	
 	local h = workspace.Portals:GetChildren()
+	
 	for i = 1,#h do
 		if h[i]:FindFirstChild("TowerPortal") ~= nil then
 			if h[i].TowerPortal.Value == Acronym then
@@ -93,6 +104,7 @@ function LoadTower(Acronym:string, Purist:boolean, ResetTimer:boolean)
 			end
 		end
 	end
+	
 	GUI:SetTowerAcronym(Acronym)
 	ResetEffectGui:Fire()
 	
@@ -110,8 +122,6 @@ function LoadTower(Acronym:string, Purist:boolean, ResetTimer:boolean)
 		
 		if COFolder then
 			-- Let the module dedicated to loading client objects load the client objects
-			print(Acronym)
-			print(workspace.Towers:FindFirstChild(Acronym):HasTag("v6"))
 			
 			if workspace.Towers:FindFirstChild(Acronym):HasTag("v6") == true then
 				--> Request server for objects
@@ -120,37 +130,34 @@ function LoadTower(Acronym:string, Purist:boolean, ResetTimer:boolean)
 				local currentlyLoading = false
 				local objectScope
 				
-				local function requestObjects()
-					if currentlyLoading then
-						return
-					end
-					currentlyLoading = true
+				if currentlyLoading then
+					return
+				end
+				currentlyLoading = true
 
-					local receivedObjects, warnings = RequestCOFolder:InvokeServer("request", COFolder)
-					local objects = receivedObjects:Clone()
-					receivedObjects:Destroy()
-					-- Tell server to clean up objects since they have already been replicated
-					RequestCOFolder:InvokeServer("cleanup")
+				local receivedObjects, warnings = RequestCOFolder:InvokeServer("request", COFolder)
+				local objects = receivedObjects:Clone()
+				receivedObjects:Destroy()
+				-- Tell server to clean up objects since they have already been replicated
+				RequestCOFolder:InvokeServer("cleanup")
 
-					objectScope = ClientObjectManager:LoadClientObjects(
-						objects,
-						ClientParts,
-						Acronym,
-						customRepository:FindFirstChild(Acronym)
-					)
-					currentlyLoading = false
-					receivedObjects = nil
-					objects = nil
+				objectScope = ClientObjectManager:LoadClientObjects(
+					objects,
+					ClientParts,
+					Acronym,
+					customRepository:FindFirstChild(Acronym),
+					false
+				)
+				currentlyLoading = false
+				receivedObjects = nil
+				objects = nil
 
-					if warnings then
-						for _, warningTable in warnings do
-							objectScope:log(warningTable)
-						end
+				if warnings then
+					for _, warningTable in warnings do
+						objectScope:log(warningTable)
 					end
 				end
 				
-				
-				requestObjects()
 				--ClientObjects:LoadClientObjects(COFolder, false)
 			else
 				ClientObjects:LoadClientObjects(COFolder, false)
@@ -293,37 +300,34 @@ do
 		local currentlyLoading = false
 		local objectScope
 
-		local function requestObjects()
-			if currentlyLoading then
-				return
-			end
-			currentlyLoading = true
+		if currentlyLoading then
+			return
+		end
+		currentlyLoading = true
 
-			local receivedObjects, warnings = RequestCOFolder:InvokeServer("request", ECOFolder)
-			local objects = receivedObjects:Clone()
-			receivedObjects:Destroy()
-			-- Tell server to clean up objects since they have already been replicated
-			RequestCOFolder:InvokeServer("cleanup")
+		local receivedObjects, warnings = RequestCOFolder:InvokeServer("request", ECOFolder)
+		local objects = receivedObjects:Clone()
+		receivedObjects:Destroy()
+		-- Tell server to clean up objects since they have already been replicated
+		RequestCOFolder:InvokeServer("cleanup")
 
-			objectScope = ClientObjectManager:LoadClientObjects(
-				objects,
-				ClientParts,
-				"Everpresent",
-				customRepository:FindFirstChild("Everpresent")
-			)
-			currentlyLoading = false
-			receivedObjects = nil
-			objects = nil
+		objectScope = ClientObjectManager:LoadClientObjects(
+			objects,
+			EverpresentClientParts,
+			"Everpresent",
+			customRepository:FindFirstChild("Everpresent"),
+			true
+		)
+		currentlyLoading = false
+		receivedObjects = nil
+		objects = nil
 
-			if warnings then
-				for _, warningTable in warnings do
-					objectScope:log(warningTable)
-				end
+		if warnings then
+			for _, warningTable in warnings do
+				objectScope:log(warningTable)
 			end
 		end
-
-
-		requestObjects()
+		
 		--ClientObjects:LoadClientObjects(COFolder, false)
 	end
 	
