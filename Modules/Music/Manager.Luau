@@ -72,6 +72,7 @@ Manager.Events = EVENTS
 local UPDATE_INTERVAL = 0.25
 local SOUND_UPDATE_INTERVAL = 0.1
 local CLASSIC_SOUND_UPDATE_INTERVAL = 0.05
+local playerData = nil
 
 local ATTRIBUTE_KEYS = {
 	INTRO = "IntroMusic",
@@ -98,11 +99,25 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
+local tweenService = game:GetService("TweenService")
 
 --> Functions
 local function generateUID(curlyBraces: boolean?, dontRemoveSplit: boolean?): string
 	return (HttpService:GenerateGUID(curlyBraces):gsub(if not dontRemoveSplit then "-" else "", ""))
 end
+
+ReplicatedStorage.Communicators.Bindables.Events.DataUpdate.Event:Connect(function(Type, data)
+	if Type == "SettingsClient" then
+		playerData = data
+		
+		if playerData["MusicVisualizer"] == false then
+			task.spawn(function()
+				task.wait(0.25)
+				tweenService:Create(workspace.CurrentCamera, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {FieldOfView = 70}):Play()
+			end)
+		end
+	end
+end)
 
 local cachedMusicNames: { [number]: string } = {}
 local function getSongName(soundId: string): string
@@ -471,20 +486,38 @@ local lastAudioCheck = os.clock()
 
 local function getRootPart(character)
 	task.wait() -- don't know why . but this fixes things
-	local humanoid = character:WaitForChild("Humanoid")
+	
+	local humanoid
+	
+	if workspace.CurrentCamera.CameraSubject then
+		if workspace.CurrentCamera.CameraSubject:IsA("Humanoid") then
+			humanoid = workspace.CurrentCamera.CameraSubject
+		else
+			humanoid = character:WaitForChild("Humanoid")
+		end
+	else
+		humanoid = character:WaitForChild("Humanoid")
+	end
+		
 	while not humanoid.RootPart do
 		task.wait()
 	end
+	
 	Manager.focusedPrimaryPart = humanoid.RootPart
 end
 
 task.spawn(getRootPart, localPlayer.Character or localPlayer.CharacterAdded:Wait())
 localPlayer.CharacterAdded:Connect(getRootPart)
+workspace.CurrentCamera:GetPropertyChangedSignal("CameraSubject"):Connect(getRootPart)
 
 RunService.Heartbeat:Connect(function()
 	debug.profilebegin("MusicSystem -> Loop")
 	local currentClock = os.clock()
 	local useSmooth = _G.MusicUseSmoothTransition
+	
+	if playerData and playerData["MusicVisualizer"] == true and Manager.CurrentSong and Manager.Muted == false then
+		tweenService:Create(workspace.CurrentCamera, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {FieldOfView = 70 + (Manager.CurrentSong.song.PlaybackLoudness / 100)}):Play()
+	end
 
 	--> Check Zones
 	debug.profilebegin("MusicSystem -> Check Music Zones")
@@ -632,6 +665,13 @@ Manager.Communicator.Event:Connect(function(type: string, ...)
 		Manager.Muted = toggle
 		Manager.SoundGroup.Volume = if toggle then 0 else Manager.SoundGroup:GetAttribute(ATTRIBUTE_KEYS.VOLUME)
 		Manager.Communicator:Fire(EVENTS.MUTE_STATE_CHANGED, toggle)
+		
+		if Manager.Muted == true then
+			task.spawn(function()
+				task.wait(0.25)
+				tweenService:Create(workspace.CurrentCamera, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {FieldOfView = 70}):Play()
+			end)
+		end
 	end
 
 	--> _G Backwards compatibility
