@@ -3,6 +3,7 @@
 return {
 	-- What does the win announcement look like?
 	WinMessage = "{PlayerName} has beaten {EndingName} in {Time}{BoostsUsed}",
+	NoHitWinMessage = "{PlayerName} has no hit {EndingName} in {Time}{BoostsUsed}",
 
 	-- How will it display what boosts the player used?
 	-- Setting this to an empty string effectively disables showing boosts used
