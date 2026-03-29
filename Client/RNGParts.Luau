@@ -8,6 +8,7 @@ local moniter = checker.Moniter
 local serverRarest = checker.ServerRarest
 local sensor = checker.Sensor
 local antiFallenPart = workspace.Lobby["Bagger 293"].BaggerAntiFallen
+local variantDetector = checker.DetectedVariants
 local emit = workspace.Lobby["Bagger 293"].Emitters:GetChildren()
 
 local folder = Instance.new("Folder")
@@ -20,6 +21,19 @@ local previous = nil
 
 local partsActive = true
 local dustActive = true
+
+local traits = {
+	"Transparent",
+	"Incepted",
+	"Spherical",
+	"Reflective",
+	"Bordered",
+	"Particles",
+	"Light",
+	"Fire",
+	"Trail",
+	"Rainbow",
+}
 
 sensor.Touched:Connect(function(part)
 	if part:FindFirstChild("Rarity") and part.Name ~= "InceptedPart" then
@@ -34,6 +48,14 @@ sensor.Touched:Connect(function(part)
 			
 			serverRarest.SurfaceGui.Frame.Rarity.Text = "1 / " .. part.Rarity.Value
 		end
+		
+		for i, String in pairs(traits) do
+			if part:HasTag(String) then
+				variantDetector.SurfaceGui.Frame[String].TextColor3 = Color3.fromRGB(255, 255, 255)
+			else
+				variantDetector.SurfaceGui.Frame[String].TextColor3 = Color3.fromRGB(70, 70, 70)
+			end
+		end		
 	end
 end)
 
@@ -80,12 +102,14 @@ function applyVariants(part:Part)
 	if math.random(1, 20) == 1 then --Spherical
 		part.Shape = Enum.PartType.Ball
 		
+		part:AddTag("Spherical")
 		rarity.Value *= 20
 	end
 	if math.random(1, 25) == 1 then --Reflective
 		part.Reflectance = 1
 		part.Material = Enum.Material.Plastic
 		
+		part:AddTag("Reflective")
 		rarity.Value *= 25
 	end
 	if math.random(1, 30) == 1 then --BoundingBox
@@ -96,6 +120,7 @@ function applyVariants(part:Part)
 		boundingBox.LineThickness = 0.125
 		boundingBox.Adornee = part
 		
+		part:AddTag("Bordered")
 		rarity.Value *= 30
 	end
 	if math.random(1, 35) == 1 then --Particle
@@ -110,6 +135,7 @@ function applyVariants(part:Part)
 		particle.Size = NumberSequence.new(1, 0)
 		particle.Speed = NumberRange.new(2)
 		
+		part:AddTag("Particles")
 		rarity.Value *= 35
 	end
 	if math.random(1, 40) == 1 then --Glow
@@ -121,6 +147,7 @@ function applyVariants(part:Part)
 		light.Range = 35
 		light.Shadows = true
 		
+		part:AddTag("Light")
 		rarity.Value *= 40
 	end
 	if math.random(1, 45) == 1 then --Fire
@@ -129,9 +156,10 @@ function applyVariants(part:Part)
 		fire.Name = "Fire"
 		fire.Parent = part
 		
+		part:AddTag("Fire")
 		rarity.Value *= 45
 	end
-	if math.random(1, 50) == 1 then
+	if math.random(1, 50) == 1 then --Trail
 		local a0 = Instance.new("Attachment")
 		local a1 = Instance.new("Attachment")
 		local trail = Instance.new("Trail")
@@ -154,6 +182,7 @@ function applyVariants(part:Part)
 		trail.Transparency = NumberSequence.new(0, 1)
 		trail.FaceCamera = true
 		
+		part:AddTag("Trail")
 		rarity.Value *= 50
 	end
 	
@@ -162,7 +191,9 @@ function applyVariants(part:Part)
 			local prevHue, sat, val = part.Color:ToHSV()
 			local hue = 0
 
-			while true do
+			while task.wait(0.05) do
+				if not part then break end
+				
 				part.Color = Color3.fromHSV(hue, sat, val)
 				
 				for i, object in ipairs(part:GetChildren()) do
@@ -182,15 +213,17 @@ function applyVariants(part:Part)
 				end
 				
 				hue = (hue + 0.03) % 1
-				task.wait(0.05)
 			end
 		end)
+		
+		part:AddTag("Rainbow")
 		rarity.Value *= 100
 	end
 	
 	if math.random(1, 5) == 1 then --Clear
 		part.Transparency = 0.5
 
+		part:AddTag("Transparent")
 		rarity.Value *= 5
 
 		if math.random(1, 15) == 1 then -- Incepted
@@ -239,6 +272,8 @@ function applyVariants(part:Part)
 					end
 				end)
 			end
+			
+			part:AddTag("Incepted")
 			rarity.Value *= 15
 		end
 	end
@@ -290,11 +325,13 @@ function applyVariants(part:Part)
 		badgeClick.MouseClick:Connect(function(plr)
 			game.ReplicatedStorage.Communicators.Remotes.Events.AwardBadge:FireServer(badgeID)
 			script.BadgeSound:Play()
+			
+			game.ReplicatedStorage.Communicators.Remotes.Events.AddDataKey:FireServer("TreasureOfTheWastefields")
 		end)
 	end
 end
 
-function waitForWheel()
+--[[function waitForWheel()
 	task.spawn(function()
 		while task.wait(0.1) do
 			if workspace:FindFirstChild("ClientParts") then
@@ -306,57 +343,12 @@ function waitForWheel()
 			end
 		end
 	end)
-end
-
-function check(baggerWheel)
-	if not baggerWheel then
-		waitForWheel()
-		return
-	end
-	
-	task.spawn(function()
-		while task.wait(2) do
-			--print("Guh")
-			--print(baggerWheel.PrimaryPart.Anchored)
-			
-			if not baggerWheel or not baggerWheel.PrimaryPart then
-				waitForWheel()
-				break
-			end
-			
-			if baggerWheel.PrimaryPart.Anchored == false then
-				if previous == nil or previous == false then
-					active = true
-
-					task.spawn(function()
-						parts()
-					end)
-
-					task.spawn(function()
-						dust()
-					end)
-
-					previous = true
-				end
-			else
-				if previous == true or previous == nil then
-					active = false
-					partsActive = false
-					dustActive = false
-					
-					previous = false
-				end
-			end
-		end
-	end)
-end
-
-waitForWheel()
+end]]--
 
 --sqrt((charPos.X - objectPos.X)^2 + (charPos.Y - objectPos.Y)^2 + (charPos.Z - objectPos.Z)^2)
 
 function parts()
-	if partsActive == true then return end
+	--if partsActive == true then return end
 	
 	partsActive = true
 	
@@ -397,7 +389,7 @@ folder2.Parent = workspace.Camera
 local dustClouds = game.ReplicatedStorage.RingExclusiveAssets.DustClouds:GetChildren()
 
 function dust()
-	if dustActive == true then return end
+	--if dustActive == true then return end
 
 	dustActive = true
 	
@@ -423,3 +415,11 @@ function dust()
 		end
 	end
 end
+
+task.spawn(function()
+	parts()	
+end)
+
+task.spawn(function()
+	dust()
+end)
