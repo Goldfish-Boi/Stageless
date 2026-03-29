@@ -69,6 +69,13 @@ for i, object in ipairs(collectionService:GetTagged("Interactable")) do
 						towerInfo.Frame.Frame.Attempts.Text = "Attempts: " .. towerData[towerName]["GlobalAttempts"]
 						towerInfo.Frame.Frame.Time.Text = "Time: " .. math.round(towerData[towerName]["GlobalTimeSpent"] / 3600) .. " Hrs"
 						
+						if towerData[towerName]["GlobalNoHitWins"] > 0 then
+							towerInfo.Frame.Frame.NoHitWins.Visible = true
+							towerInfo.Frame.Frame.NoHitWins.Text = "No Hit Wins: " .. towerData[towerName]["GlobalNoHitWins"]
+						else
+							towerInfo.Frame.Frame.NoHitWins.Visible = false
+							towerInfo.Frame.Frame.NoHitWins.Text = ""
+						end
 						--print(towerData)
 					end
 				end
