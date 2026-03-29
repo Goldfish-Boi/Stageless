@@ -12,6 +12,7 @@ local prev = bar.Back
 local nex = bar.Front
 local button = script.Parent.Open
 
+local connection
 local isSpectating = false
 local playerSettings = nil
 local PeopleSpectatingYou = {}
@@ -38,7 +39,7 @@ function specate(player:Player)
 
 	if game.Players:GetPlayerFromCharacter(cam.CameraSubject.Parent).Name == game.Players.LocalPlayer.Name then return end
 	
-	player.CharacterAdded:Connect(function()
+	connection = player.CharacterAdded:Connect(function()
 		task.wait(0.125)
 		
 		specate(player)
@@ -86,6 +87,10 @@ end
 function returnToSelf()
 	cam.CameraSubject = game.Players.LocalPlayer.Character.Humanoid
 	title.Text = game.Players.LocalPlayer.Name
+	
+	if connection then
+		connection:Disconnect()
+	end
 end
 
 game.ReplicatedStorage.Communicators.Bindables.Events.DataUpdate.Event:Connect(function(Type, data)
@@ -123,6 +128,14 @@ button.MouseButton1Click:connect(function()
 		
 		bar.Position = UDim2.new(5, 0, 0, 0)
 	end
+end)
+
+button.MouseEnter:Connect(function()
+	TweenService:Create(button.UIAspectRatioConstraint, TweenInfo.new(0.125, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {AspectRatio = 2.5}):Play()
+end)
+
+button.MouseLeave:Connect(function()
+	TweenService:Create(button.UIAspectRatioConstraint, TweenInfo.new(0.125, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {AspectRatio = 3}):Play()
 end)
 
 prev.MouseButton1Click:connect(function()
