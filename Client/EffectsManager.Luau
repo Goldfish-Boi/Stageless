@@ -13,6 +13,7 @@ local portal = gui.PortalWipe
 local death = gui.Death
 local fixed = death.Fixed
 local broken = death.Broken
+local quickWipe = gui.QuickWipe
 local currentTower = ""
 
 local musicModule = require(game.ReplicatedStorage:WaitForChild("Background Music"):WaitForChild("MusicSystemManager"))
@@ -22,6 +23,7 @@ local cameraShake = require(script.CameraShaker)
 local debounce = false
 local db = false
 local dead = false
+local inTower = false
 
 local playerData = nil
 
@@ -81,16 +83,30 @@ function typeCheck(triggerPart, cutsceneType, additionalInfo)
 		return
 	elseif cutsceneType == "Portal" then
 		task.spawn(function()
-			cutscene(triggerPart, cutsceneType, additionalInfo)
+			portalTransition(triggerPart, cutsceneType, additionalInfo)
 		end)
 		
 		task.spawn(function()
-			portalTransition(triggerPart, cutsceneType, additionalInfo)
+			cutscene(triggerPart, cutsceneType, additionalInfo)
 		end)
 	elseif cutsceneType == "TowerRush" then
 		cutscene(triggerPart, cutsceneType, additionalInfo)
 	elseif cutsceneType == "Win" then
 		win()
+	elseif cutsceneType == "Quick" then
+		quick()
+	end
+end
+
+function quick()
+	for i, frame:Frame in ipairs(quickWipe:GetChildren()) do
+		TweenService:Create(frame, TweenInfo.new(math.random(2, 10) / 10, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.fromScale(frame.Position.X.Scale, 0)}):Play()
+	end
+	
+	task.wait(2)
+	
+	for i, frame:Frame in ipairs(quickWipe:GetChildren()) do
+		TweenService:Create(frame, TweenInfo.new(math.random(2, 10) / 10, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Position = UDim2.fromScale(frame.Position.X.Scale, if string.find(frame.Name, "Top") then 1.1 else -1.1)}):Play()
 	end
 end
 
@@ -351,7 +367,10 @@ end
 function onPlayerDied()
 	dead = true
 	
-	print(playerData["DisplayDeathScreen"])
+	if playerData["RestartOnDeath"] == true and inTower == true then
+		RemoteEvents.RestartRequested:FireServer()
+		return
+	end
 	
 	if playerData["DisplayDeathScreen"] == false then
 		task.wait(3)
@@ -432,8 +451,7 @@ function onPlayerDied()
 					end
 				end
 			end)
-
-
+			
 			fixed.ImageTransparency = 1
 			broken.ImageTransparency = 0
 			death.Flash.BackgroundTransparency = 0
@@ -444,6 +462,10 @@ function onPlayerDied()
 
 			if currentTower ~= "" then
 				death.Respawn.Tower.Visible = true
+				death.Respawn.Lobby.TextLabel.Text = "Return to lobby"
+			else
+				death.Respawn.Tower.Visible = false
+				death.Respawn.Lobby.TextLabel.Text = "Respawn"
 			end
 
 			fixed.Size = UDim2.fromScale(0.5, 0.4)
@@ -553,6 +575,14 @@ death.Respawn.Tower.MouseButton1Click:Connect(function()
 	local respawn = respawn("Tower")
 
 	if respawn == true then RemoteEvents.RestartRequested:FireServer("Death") end
+end)
+
+RemoteEvents.LoadTower.OnClientEvent:Connect(function()
+	inTower = true
+end)
+
+RemoteEvents.UnloadTower.OnClientEvent:Connect(function()
+	inTower = false
 end)
 
 BindableEvents.GuiTransition.Event:Connect(transition)
