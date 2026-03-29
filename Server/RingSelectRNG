@@ -1,0 +1,219 @@
+local httpService = game:GetService("HttpService")
+
+local Materials = {
+	Enum.Material.Asphalt,
+	Enum.Material.Basalt,
+	Enum.Material.Brick,
+	Enum.Material.Cobblestone,
+	Enum.Material.Concrete,
+	Enum.Material.CorrodedMetal,
+	Enum.Material.CrackedLava,
+	Enum.Material.DiamondPlate,
+	Enum.Material.Fabric,
+	Enum.Material.Foil,
+	Enum.Material.Granite,
+	Enum.Material.Grass,
+	Enum.Material.Ground,
+	Enum.Material.Ice,
+	Enum.Material.LeafyGrass,
+	Enum.Material.Limestone,
+	Enum.Material.Marble,
+	Enum.Material.Metal,
+	Enum.Material.Mud,
+	Enum.Material.Neon,
+	Enum.Material.Pavement,
+	Enum.Material.Pebble,
+	Enum.Material.Plastic,
+	Enum.Material.Rock,
+	Enum.Material.Salt,
+	Enum.Material.Sand,
+	Enum.Material.Sandstone,
+	Enum.Material.Slate,
+	Enum.Material.SmoothPlastic,
+	Enum.Material.Snow,
+	Enum.Material.Wood,
+	Enum.Material.WoodPlanks
+}
+
+local webhook = "https://webhook.lewisakura.moe/api/webhooks/1462838498733330523/pemz80Zy-0U6Voot0iBCQfibOUJRH5X091APXJ1IygcXUdfijtBObWrBMFwMGEE_IRYX"
+
+function PlayerAdded(plr)
+	local rarity = 1
+	local functions = {}
+	local events = {}
+
+	local randomTable = {
+		["Inverted"] = 100,
+		["Rainbow"] = 111,
+		["Monochrome"] = 100,
+		["SuperSun"] = 25,
+		["MegaFish"] = 50,
+		["FishSquares"] = 75,
+		["MToBVCStack"] = 20,
+		["LilTree"] = 2,
+		["Colourful"] = 67,
+		["Empty"] = 250,
+		["MaterialShift"] = 300,
+	}
+	
+	local compoundRandomTable = {
+		["OneBitColour"] = 5,
+		["Fruits"] = 2,
+	}
+	
+	function functions.Inverted()
+		events["Inverted"] = randomTable["Inverted"]
+
+		game.Lighting:FindFirstChild("ColorCorrection").Contrast = -2
+	end
+	
+	function functions.Rainbow()
+		events["Rainbow"] = randomTable["Rainbow"]
+		
+		task.spawn(function()
+			require(script.RainbowScript)()
+		end)
+	end
+	
+	function functions.Monochrome()
+		events["Monochrome"] = randomTable["Monochrome"]
+		
+		game.Lighting:FindFirstChild("ColorCorrection").Saturation = -1
+	end
+	
+	function functions.OneBitColour()
+		if not table.find(events, "Monochrome") then return false end
+		
+		events["One Bit Colour"] = compoundRandomTable["OneBitColour"]
+		
+		if table.find(events, "Inverted") then
+			game.Lighting:FindFirstChild("ColorCorrection").Contrast = -99
+		else
+			game.Lighting:FindFirstChild("ColorCorrection").Contrast = 99
+		end
+		
+		return true
+	end
+	
+	function functions.SuperSun()
+		events["Super Sun"] = randomTable["SuperSun"]
+		
+		game.Lighting.GeographicLatitude = 310
+		game.Lighting.Sky.SunAngularSize = 60
+		
+		local sunrays = Instance.new("SunRaysEffect")
+		
+		sunrays.Spread = 0.5
+		sunrays.Parent = game.Lighting
+	end
+
+	function functions.MegaFish()
+		events["Mega Fish"] = randomTable["MegaFish"]
+
+		script.Goldfish.Parent = workspace
+	end
+
+	function functions.FishSquares()
+		events["Fish Squares"] = randomTable["FishSquares"]
+	end
+	
+	function functions.Colourful()
+		events["Colourful"] = randomTable["Colourful"]
+	end
+
+	function functions.MToBVCStack()
+		events["MToBVC Stack"] = randomTable["MToBVCStack"]
+
+		script.MToBVCStack.Parent = workspace
+	end
+	
+	function functions.MaterialShift()
+		events["Material Shift"] = randomTable["MaterialShift"]
+		
+		for i, item:Instance in ipairs(workspace:GetDescendants()) do
+			if not item:IsA("BasePart") or item:IsA("MeshPart") then continue end
+			
+			item.Material = Materials[math.random(1, #Materials)]
+		end
+	end
+	
+	function functions.Empty()
+		events["Empty"] = randomTable["Empty"]
+		
+		game.Debris:AddItem(workspace.Map.Towers, 0)
+	end
+	
+	function functions.LilTree()
+		events["Lil' Tree"] = randomTable["LilTree"]
+		
+		script.Tree.Parent = workspace
+	end
+	
+	function functions.Fruits()
+		if not table.find(events, "Lil' Tree") then return false end
+		
+		events["Fruit"] = compoundRandomTable["Fruits"]
+		
+		script.Fruits.Parent = workspace
+		
+		return true
+	end
+
+	for item, itemRarity in pairs(randomTable) do
+		if math.random(1, itemRarity) == 1 then
+			functions[item]()
+
+			rarity *= itemRarity
+		else
+			continue
+		end
+	end
+	
+	for item, itemRarity in pairs(compoundRandomTable) do
+		if math.random(1, itemRarity) == 1 then
+			local isExecuted = functions[item]()
+			
+			if isExecuted then
+				rarity *= itemRarity
+			end
+		else
+			continue
+		end
+	end
+
+	local guh = plr:WaitForChild("PlayerGui"):WaitForChild("MainGui"):WaitForChild("MainFrame"):WaitForChild("RingSelectRarity")
+	
+	print(rarity)
+	print(events)
+	
+	task.spawn(function()
+		task.wait(7)
+		game.ReplicatedStorage.RNGEvents:FireClient(plr, rarity, events)
+	end)
+	
+	if rarity < 100 then return end
+	
+	local stringToSend = plr.Name .. " got a 1 / " .. rarity .. " [" .. 100 / rarity .. "%]" .. " ring select!"
+	
+	print(stringToSend)
+	
+	local discordData = {
+		content = stringToSend
+	}
+	
+	local success, response = pcall(function()
+		httpService:PostAsync(webhook, httpService:JSONEncode(discordData), Enum.HttpContentType.ApplicationJson)
+	end)
+	
+	if not success then
+		warn(response)
+	end
+end
+
+--Connect the event
+game.Players.PlayerAdded:Connect(PlayerAdded)
+
+--Take care of when it already exists
+for i,v in pairs(game.Players:GetPlayers()) do
+	PlayerAdded(v)
+end
