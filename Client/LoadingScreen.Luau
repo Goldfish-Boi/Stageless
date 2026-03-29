@@ -26,12 +26,37 @@ local assets = game:GetChildren()
 
 local left = loadingScreen.MainFrame.Progress:WaitForChild("Left")
 local right = loadingScreen.MainFrame.Progress:WaitForChild("Right")
+local tile = loadingScreen.MainFrame.Tile
+
+--[[local function updateTileSize()
+	local frameSize = loadingScreen.MainFrame.AbsoluteSize
+	local tileHeight = frameSize.Y / 8
+	local tileWidth = tileHeight
+	tile.TileSize = UDim2.fromScale(tileWidth / frameSize.X, tileHeight / frameSize.Y)
+end
+
+updateTileSize()
+
+loadingScreen.MainFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateTileSize)]]--
 
 local ti = TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
 
 local numValue = Instance.new("NumberValue")
 numValue.Value = 0
 
+task.spawn(function()
+	while true do
+		if not loadingScreen then
+			break
+		end
+		
+		tile.Position = UDim2.fromScale(-1, -1)
+		
+		TweenService:Create(tile, TweenInfo.new(25, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {Position = UDim2.fromScale(0, 0)}):Play()
+		
+		task.wait(25)
+	end
+end)
 
 numValue.Changed:Connect(function()
 	local rightRot = math.clamp(numValue.Value - 180, -180, 0)
@@ -49,9 +74,13 @@ numValue.Changed:Connect(function()
 end)
 
 task.spawn(function()
-	while task.wait(3) do
+	while true do
 		if active == true then
-			loadingScreen.MainFrame.SillyText.Text = loadingScreenTips[math.random(1, #loadingScreenTips)]
+			local listItem = loadingScreenTips[math.random(1, #loadingScreenTips)]
+			
+			loadingScreen.MainFrame.SillyText.Text = listItem
+			
+			task.wait(3)
 		else
 			break
 		end
@@ -73,6 +102,10 @@ right.UIGradient.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(1, 1,
 left.UIGradient.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(1, 1, 1))
 
 active = false
+
+TweenService:Create(loadingScreen.MainFrame.Tile, TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 1}):Play()
+
+task.wait(0.5)
 
 TweenService:Create(loadingScreen.MainFrame.Progress, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {Position = UDim2.new(0.5, 0, 1.5, 0)}):Play()
 TweenService:Create(loadingScreen.MainFrame.Loading, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {Position = UDim2.new(0.5, 0, 1.5, 0)}):Play()
