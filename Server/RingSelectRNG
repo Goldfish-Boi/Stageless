@@ -35,7 +35,7 @@ local Materials = {
 	Enum.Material.WoodPlanks
 }
 
-local webhook = "https://webhook.lewisakura.moe/api/webhooks/1462838498733330523/pemz80Zy-0U6Voot0iBCQfibOUJRH5X091APXJ1IygcXUdfijtBObWrBMFwMGEE_IRYX"
+local webhook = "https://webhook.lewisakura.moe/api/webhooks/[YOUR DISCORD WEBOOK]/[YOUR WEBHOOK KEY]"
 
 function PlayerAdded(plr)
 	local rarity = 1
