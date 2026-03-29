@@ -8,6 +8,17 @@ local winEvent = events.Remotes.Events.OnTowerWin
 local confetti = replicatedStorage.WinningConfetti
 local winSound = script.WinSound
 
+local nonSCDifs = {
+	"Effortless",
+	"Easy",
+	"Medium",
+	"Hard",
+	"Difficult",
+	"Challenging",
+	"Intense",
+	"Remorseless",
+}
+
 local playerData
 
 if player == nil then
@@ -44,6 +55,15 @@ end)
 --local displayWinningConfetti:BoolValue = player:WaitForChild("Values"):WaitForChild("DisplayWinningConfetti")
 
 winEvent.OnClientEvent:Connect(function(TowerName, TowerDif)
+	print(TowerDif)
+	print(table.find(nonSCDifs, TowerDif))
+	
+	if table.find(nonSCDifs, TowerDif) ~= nil then
+		RemoteEvents.AddDataKey:FireServer(TowerDif .. "Beaten")
+	else
+		RemoteEvents.AddDataKey:FireServer("SoulCrushingBeaten")
+	end
+	
 	winEvent:FireServer(TowerName, TowerDif)
 	
 	if playerData["DisplayWinningConfetti"] == true or not playerData then
