@@ -1,3 +1,5 @@
+--!strict
+
 -- Written by fanofpixels
 
 local m = {}
@@ -6,16 +8,23 @@ local PlayerGui = game:GetService("Players").LocalPlayer.PlayerGui
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local textChatService = game:GetService("TextChatService")
+
 local Util = require(script.Parent.Util)
+
 local TowerGui:ScreenGui = PlayerGui:WaitForChild("TowerGUI")
 TowerGui.Enabled = true
+
+local isChatFocused:boolean = false
 
 -- Elements
 local TowerAcronym:TextLabel? = TowerGui:FindFirstChild("TowerAcronym",true)::TextLabel
 local TowerRushProgress:TextLabel? = TowerGui:FindFirstChild("TowerRushProgress",true)::TextLabel
 local Timer:TextLabel? = TowerGui:FindFirstChild("Timer",true)::TextLabel
 local BoostsUsed:TextLabel? = TowerGui:FindFirstChild("BoostsUsed",true)::TextLabel
-local RestartLabel = TowerGui:FindFirstChild("RestartPanel")
+local RestartLabel:Frame? = TowerGui:FindFirstChild("RestartPanel")::Frame
+
+local chatInputBarConfiguration:ChatInputBarConfiguration = textChatService:FindFirstChildOfClass("ChatInputBarConfiguration")
 
 if RestartLabel then
 	RestartLabel.Visible = false
@@ -54,49 +63,55 @@ function m:SetBoostsUsed(Val:boolean)
 end
 
 function m:SetRestartLabel(T:number)
-	--[[if RestartLabel then
-		RestartLabel.TextTransparency = 1-T
-	end]]--
+	if not RestartLabel then return end
 	
-	TweenService:Create(RestartLabel.Icon, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Rotation = T * 360}):Play()
-	TweenService:Create(RestartLabel.Bg.Progress, TweenInfo.new(0.125, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {Size = UDim2.new(T, 0, 1, 0)}):Play()
+	local icon:ImageLabel = RestartLabel:FindFirstChild("Icon")::ImageLabel
+	local bg:Frame = RestartLabel:FindFirstChild("Bg")::Frame
+	local progress:Frame = bg:FindFirstChild("Progress")::Frame
+	
+	TweenService:Create(icon, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Rotation = T * 360}):Play()
+	TweenService:Create(progress, TweenInfo.new(0.125, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut), {Size = UDim2.new(T, 0, 1, 0)}):Play()
 end
 
 function m:OpenRestartLabel(enabled)
-	if game.StarterGui:GetCore("ChatActive") == false then
-		if enabled == true then
-			RestartLabel.Position = UDim2.new(0.5, 0, 0.7, 0)
-			RestartLabel.Visible = true
+	if (isChatFocused == true) or (not RestartLabel) then return end
 
-			TweenService:Create(RestartLabel, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, 0, 0.65, 0), BackgroundTransparency = 0}):Play()
+	if enabled == true then
+		RestartLabel.Position = UDim2.new(0.5, 0, 0.7, 0)
+		RestartLabel.Visible = true
 
-			for i, object in ipairs(RestartLabel:GetDescendants()) do
-				if object:IsA("TextLabel") then
-					TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {TextTransparency = 0}):Play()
-				elseif object:IsA("Frame") then
-					TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0}):Play()
-				elseif object:IsA("ImageLabel") then
-					TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 0}):Play()
-				elseif object:IsA("UIStroke") then
-					TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0}):Play()
-				end
+		TweenService:Create(RestartLabel, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Position = UDim2.new(0.5, 0, 0.65, 0), BackgroundTransparency = 0}):Play()
+
+		for i, object in ipairs(RestartLabel:GetDescendants()) do
+			if object:IsA("TextLabel") then
+				TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {TextTransparency = 0}):Play()
+			elseif object:IsA("Frame") then
+				TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0}):Play()
+			elseif object:IsA("ImageLabel") then
+				TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 0}):Play()
+			elseif object:IsA("UIStroke") then
+				TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0}):Play()
 			end
-		else
-			TweenService:Create(RestartLabel, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 1}):Play()
+		end
+	else
+		TweenService:Create(RestartLabel, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 1}):Play()
 
-			for i, object in ipairs(RestartLabel:GetDescendants()) do
-				if object:IsA("TextLabel") then
-					TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {TextTransparency = 1}):Play()
-				elseif object:IsA("Frame") then
-					TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 1}):Play()
-				elseif object:IsA("ImageLabel") then
-					TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 1}):Play()
-				elseif object:IsA("UIStroke") then
-					TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 1}):Play()
-				end
+		for i, object in ipairs(RestartLabel:GetDescendants()) do
+			if object:IsA("TextLabel") then
+				TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {TextTransparency = 1}):Play()
+			elseif object:IsA("Frame") then
+				TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 1}):Play()
+			elseif object:IsA("ImageLabel") then
+				TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency = 1}):Play()
+			elseif object:IsA("UIStroke") then
+				TweenService:Create(object, TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 1}):Play()
 			end
 		end
 	end
 end
+
+chatInputBarConfiguration:GetPropertyChangedSignal("IsFocused"):Connect(function()
+	isChatFocused = chatInputBarConfiguration.IsFocused
+end)
 
 return m
